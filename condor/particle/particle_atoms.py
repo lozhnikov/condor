@@ -84,7 +84,8 @@ class ParticleAtoms(AbstractParticle):
                  atomic_numbers = None, atomic_positions = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  number = 1., arrival = "synchronised",
-                 position = None,  position_variation = None, position_spread = None, position_variation_n = None):
+                 position = None,  position_variation = None, position_spread = None, position_variation_n = None,
+                 atomic_formfactors = None):
         try:
             import spsim
         except Exception as e:
@@ -98,6 +99,7 @@ class ParticleAtoms(AbstractParticle):
                                   position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         self._atomic_positions  = None
         self._atomic_numbers    = None
+        self._atomic_formfactors = None
         self._pdb_filename      = None
         self._diameter_mean    = None
         if pdb_filename is not None:
@@ -119,7 +121,10 @@ class ParticleAtoms(AbstractParticle):
                 self.set_atoms_from_pdb_id(pdb_id)
         elif atomic_numbers is not None and atomic_positions is not None:
             log_debug(logger, "Attempt reading atoms from lists/attays.")
-            self.set_atoms_from_arrays(atomic_numbers, atomic_positions)
+            if atomic_formfactors is None:
+                self.set_atoms_from_arrays(atomic_numbers, atomic_positions)
+            else:
+                self.set_atoms_from_arrays_and_formfactors(atomic_numbers, atomic_positions, atomic_formfactors)
         else:
             log_and_raise_error(logger, "Cannot initialise particle model. The atomic positions have to be specified either by a pdb_filename, pdb_id or by atomic_numbers and atomic_positions.")
 
@@ -181,6 +186,26 @@ class ParticleAtoms(AbstractParticle):
         self._atomic_positions = numpy.array(atomic_positions)
         self._atomic_numbers   = numpy.array(atomic_numbers)
 
+    def set_atoms_from_arrays_and_formfactors(self, atomic_numbers, atomic_positions, atomic_formfactors):
+        r"""
+        Specify atomic positions from atomic numbers, atomic positions and atomic formfactors
+
+        Args:
+          :atomic_numbers (array): Integer array of atomic numbers specifies the element species of each atom. Array shape: (:math:`N`,) with :math:`N` denoting the number of atoms.
+
+          :atomic_position (array): Float array of atomic positions [:math:`x`, :math:`y`, :math:`z`] in unit meter. Array shape: (:math:`N`, 3,) with :math:`N` denoting the number of atoms
+
+          :atomic_formfactors (array): Float array of atomic formfactors [:math:`a1`, :math:`b1`, :math:`a2`, :math:`b2`, :math:`a3`, :math:`b3`, :math:`a4`, :math:`b4`, :math:`c`]. Array shape: (:math:`N`, 9,) with :math:`N` denoting the number of atoms
+        """
+        N1 = len(atomic_numbers)
+        N2 = len(atomic_positions)
+        N3 = len(atomic_formfactors)
+        if N1 != N2 or N1 != N3:
+            log_and_raise_error(logger, "Cannot set atoms. atomic_numbers, atomic_positions and atomic_formfactors have to have the same length")
+        self._atomic_positions = numpy.array(atomic_positions)
+        self._atomic_numbers   = numpy.array(atomic_numbers)
+        self._atomic_formfactors = numpy.array(atomic_formfactors)
+
     def get_atomic_numbers(self):
         """
         Return the array of atomic numbers
@@ -192,6 +217,15 @@ class ParticleAtoms(AbstractParticle):
         Return the array of atomic positions
         """
         return self._atomic_positions.copy()
+
+    def get_atomic_formfactors(self):
+        """
+        Return the array of atomic formfactors
+        """
+        if self._atomic_formfactors is None:
+            return None
+
+        return self._atomic_formfactors.copy()
 
     def get_atomic_standard_weights(self):
         """
@@ -244,5 +278,6 @@ class ParticleAtoms(AbstractParticle):
         O["particle_model"]   = "atoms"
         O["atomic_numbers"]   = self.get_atomic_numbers()
         O["atomic_positions"] = self.get_atomic_positions()
+        O["atomic_formfactors"] = self.get_atomic_formfactors()
         return O
 

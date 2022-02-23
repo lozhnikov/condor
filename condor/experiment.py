@@ -328,7 +328,7 @@ class Experiment:
                 opts = condor.utils.config._conf_to_spsim_opts(D_source, D_particle, D_detector, ndim=ndim, qn=qn, qmax=qmax)
                 spsim.write_options_file("./spsim.confout",opts)
                 # Create molecule struct
-                mol = spsim.get_molecule_from_atoms(D_particle["atomic_numbers"], D_particle["atomic_positions"])
+                mol = spsim.get_molecule_from_atoms(D_particle["atomic_numbers"], D_particle["atomic_positions"], D_particle["atomic_formfactors"])
                 # Always recenter molecule
                 spsim.origin_to_center_of_mass(mol)
                 spsim.write_pdb_from_mol("./mol.pdbout", mol)
